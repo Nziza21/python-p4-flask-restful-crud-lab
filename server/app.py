@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 from flask import Flask, jsonify, request, make_response
 from flask_migrate import Migrate
 from flask_restful import Api, Resource
@@ -16,40 +14,49 @@ db.init_app(app)
 
 api = Api(app)
 
-
-class Plants(Resource):
-
+class AllPlants(Resource):
     def get(self):
-        plants = [plant.to_dict() for plant in Plant.query.all()]
-        return make_response(jsonify(plants), 200)
+        all_plants_data = [] 
+        return jsonify(all_plants_data)
 
-    def post(self):
+class SinglePlant(Resource):
+    def get(self, id):
+        plant_data = {}  
+        return jsonify(plant_data)
+
+class UpdatePlant(Resource):
+    def patch(self, id):
         data = request.get_json()
 
-        new_plant = Plant(
-            name=data['name'],
-            image=data['image'],
-            price=data['price'],
-        )
+        plant = Plant.query.get(id)
 
-        db.session.add(new_plant)
+        if not plant:
+            return make_response(jsonify({'error': 'Plant not found'}), 404)
+
+        if 'is_in_stock' in data:
+            plant.is_in_stock = data['is_in_stock']
+
+
         db.session.commit()
 
-        return make_response(new_plant.to_dict(), 201)
+        return make_response(jsonify(plant.to_dict()), 200)
 
+class DestroyPlant(Resource):
+    def delete(self, id):
+        plant = Plant.query.get(id)
 
-api.add_resource(Plants, '/plants')
+        if not plant:
+            return make_response(jsonify({'error': 'Plant not found'}), 404)
 
+        db.session.delete(plant)
+        db.session.commit()
 
-class PlantByID(Resource):
+        return make_response('', 204)
 
-    def get(self, id):
-        plant = Plant.query.filter_by(id=id).first().to_dict()
-        return make_response(jsonify(plant), 200)
-
-
-api.add_resource(PlantByID, '/plants/<int:id>')
-
+api.add_resource(AllPlants, '/plants')
+api.add_resource(SinglePlant, '/plants/<int:id>')
+api.add_resource(UpdatePlant, '/plants/<int:id>')
+api.add_resource(DestroyPlant, '/plants/<int:id>')
 
 if __name__ == '__main__':
-    app.run(port=5555, debug=True)
+    app.run(port=5000, debug=True)
